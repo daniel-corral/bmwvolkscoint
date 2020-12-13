@@ -1,0 +1,88 @@
+---
+title: "Caso Práctico 06: BMW vs Volkswagen"
+author: "Daniel Corral Ruiz"
+date: "13-12-2020"
+output:
+  html_document:
+    toc: yes
+    toc_depth: '5'
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: '5'
+---
+
+```{r echo=FALSE,warning= FALSE, message=FALSE}
+library(tidyverse)
+library(broom)
+library(flextable)
+library(mgcv)
+library(reshape2)
+library(readr)
+library(ggplot2)
+library(skimr)
+library(imputeTS)
+require(forecast)
+require(xts)
+library(ggfortify)
+library(TSA)
+library(zoo)
+library(Hmisc)
+library(aTSA)
+library(quantmod)
+library(forecast)
+library(fGarch)
+library(vars)
+library(devtools)
+library(PairTrading)
+library(urca)
+library(tseries)
+```
+
+## Objetivos informe
+Utilizando datos diarios de los dos series desde el año 2014, debemos analizar la relación entre BMW y Volkswagen, contestando a las siguiente preguntas:
+
+- ¿Están cointegradas?
+
+## Carga de datos
+Comenzamos cargando el dataset mediante la librería "quantmod". Esta librería nos permite obtener la información financiera de empresas durante un periodo de tiempo determinado. Descargamos los datos de BMW y Volkswagen entre 2014-01-01 y 2020-11-20.
+
+```{r warning= FALSE, message=FALSE, echo=FALSE}
+BMW <- getSymbols("BMW.DE", from="2014-01-01", to="2020-11-20",auto.assign=FALSE) 
+VOLK <- getSymbols("VOW3.DE", from="2014-01-01", to="2020-11-20",auto.assign=FALSE) 
+```
+
+## Estudiar cointegración
+
+```{r warning= FALSE, message=FALSE, echo=FALSE}
+databmw <- BMW[,6]
+datavolk <- VOLK[,6]
+datajunto <- cbind(databmw, datavolk)
+datajunto <- na.omit(datajunto)
+adf.test(datajunto[,1],k=0)
+adf.test(datajunto[,2],k=0)
+```
+
+Hemos realizado el test de Dickey-Fuller para determinar la existencia o no de raíces unitarias en una serie de tiempo. La hipótesis nula de esta prueba es que existe una raíz unitaria en la serie. Como obtenemos en ambas serie un p-valor mayor a 0.05, aceptamos Ho, por lo tanto no son estacionarias.
+
+```{r warning= FALSE, message=FALSE, echo=FALSE}
+library(urca)
+test_1<-ur.df(datajunto[,1],type="none",selectlags="AIC",lags=10)
+#summary(test_1)
+
+test_2<-ur.df(datajunto[,1],type="trend",selectlags="AIC",lags=10)
+#summary(test_2)
+
+reg <- EstimateParameters(datajunto, method = lm)
+plot(reg$spread)
+IsStationary(reg$spread, 0.1)
+x <- as.vector(datajunto[,1])
+y <- as.vector(datajunto[,2])
+coint.test(x,y)
+```
+
+Observamos como los p valores no reflejan estacionariedad. Además se dice que dichas variables están cointegradas cuando puede practicarse una regresión lineal, por tanto, presentan cointegración BMW y VOLKSWAGEN. Dos variables no estacionarias cointegradas son aquellas cuyos residuos son estacionarios. Si los residuos son estacionarios las estimaciones de variables no estacionarias son superconsistentes.
+
+
+
+
